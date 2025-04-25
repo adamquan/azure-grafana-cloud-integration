@@ -1,0 +1,5 @@
+export TF_VAR_azure_subscription_id=
+export TF_VAR_org_slug=mgmresorts
+export TF_VAR_grafana_cloud_region=prod-us-east-0
+export TF_VAR_org_id=968105
+export TF_VAR_grafana_tf_access_policy_token=
