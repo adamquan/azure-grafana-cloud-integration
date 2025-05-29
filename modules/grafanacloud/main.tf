@@ -70,4 +70,47 @@ resource "grafana_cloud_provider_azure_credential" "azurecred" {
 }
 
 
+# logs integration via Azure event hub using serverless integration
+# Doc: https://grafana.com/docs/grafana-cloud/monitor-infrastructure/monitor-cloud-provider/azure/config-azure-logs-azure-function/?pg=blog&plcmt=body-txt
+provider "azurerm" {
+  features {
+  }
+}
 
+data "http" "template" {
+  url = "https://raw.githubusercontent.com/grafana/azure_eventhub_to_loki/refs/tags/0.0.7/azdeploy.json"
+
+  lifecycle {
+    postcondition {
+      condition     = self.status_code == 200
+      error_message = "Unsuccessful status code attempting to download template"
+    }
+  }
+}
+
+resource "azurerm_resource_group" "logexport" {
+  name     = "adam-logexport"
+  location = "${var.azure_location}"
+}
+
+resource "azurerm_resource_group_template_deployment" "logexport" {
+  name                = "${azurerm_resource_group.logexport.name}-deploy"
+  resource_group_name = azurerm_resource_group.logexport.name
+  deployment_mode     = "Complete"
+  template_content    = data.http.template.response_body
+
+  parameters_content = jsonencode({
+    "lokiEndpoint" = {
+      value = "${var.loki_endpoint}"
+    }
+    "lokiUsername" = {
+      value = "${var.loki_user}"
+    }
+    "lokiPassword" = {
+      value = "${var.loki_token}"
+    }
+    "packageUri" = {
+      value = "https://github.com/grafana/azure_eventhub_to_loki/releases/download/0.0.7/logexport.0.0.7.zip"
+    }
+  })
+}
